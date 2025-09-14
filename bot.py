@@ -30,7 +30,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file_path = os.path.join("photos", file_name)
     await photo_file.download_to_drive(file_path)
     photo_paths.append(file_path)
-    await update.message.reply_text("📸 Photo saved.")
+
+    await update.message.reply_text("📸 Photo saved. Send /send when you're ready.")
 
 async def send_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorized(update):
@@ -51,15 +52,19 @@ async def send_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
         with open(path, "rb") as f:
             msg.add_attachment(f.read(), maintype="image", subtype="jpeg", filename=os.path.basename(path))
 
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-        server.starttls()
-        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-        server.send_message(msg)
+    try:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            server.send_message(msg)
+        await update.message.reply_text("✅ Photos sent successfully.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Failed to send email: {e}")
 
+    # Clear saved photos
     photo_paths.clear()
     shutil.rmtree("photos")
     os.makedirs("photos", exist_ok=True)
-
     await update.message.reply_text("✅ Photos sent successfully.")
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
